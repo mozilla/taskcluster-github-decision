@@ -78,14 +78,25 @@ def taskcluster_event_context():
 
     return das_context
 
+def load_specific_contextFile(file):
+    specific_context = {}
+
+    try:
+        with open(os.path.join(TASKS_ROOT, file)) as src:
+            specific_context = yaml.load(src)
+
+        if specific_context is None:
+            specific_context = {}
+    except FileNotFoundError:
+        specific_context = {}
+
+    return specific_context
+
 def defaultValues_build_context():
-    with open(os.path.join(TASKS_ROOT, '.build.yml')) as src:
-        default_build_context = yaml.load(src)
+    return load_specific_contextFile('.build.yml')
 
-    if default_build_context is None:
-        default_build_context = {}
-
-    return default_build_context
+def shared_context():
+    return load_specific_contextFile('.shared.yml')
 
 def create_task_payload(build, base_context):
     build_type = os.path.splitext(os.path.basename(build))[0]
@@ -149,6 +160,7 @@ def functions_context():
 if __name__ == '__main__' :
     base_context = taskcluster_event_context()
     base_context = merge_dicts(base_context, functions_context())
+    base_context = merge_dicts(base_context, shared_context())
 
     root_task = base_context['taskcluster']['taskGroupId']
     tasks_graph = nx.DiGraph()
