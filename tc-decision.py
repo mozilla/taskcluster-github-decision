@@ -13,6 +13,7 @@ import sys
 import requests
 import slugid
 import yaml
+import subprocess
 
 import networkx as nx
 
@@ -157,7 +158,46 @@ def functions_context():
       'to_int': to_int
     }
 
+def is_dry_run():
+    return (len(sys.argv) > 1) and (sys.argv[1] == '--dry')
+
+def should_run():
+    # Make a quick clone to fetch the last commit
+    try:
+        subprocess.check_call([
+            'git', 'clone', '--quiet', '-b', os.environ.get('GITHUB_HEAD_BRANCH'),
+            '--single-branch', os.environ.get('GITHUB_HEAD_REPO_URL'),
+            '--depth=1', '/tmp/ds-clone/'
+        ], env={ 'GIT_LFS_SKIP_SMUDGE': '1'})
+    except subprocess.CalledProcessError as e:
+        print("Error while git cloning:", e, file=sys.stderr)
+        return False
+
+    try:
+        git_msg = subprocess.check_output([
+            'git', '--git-dir=/tmp/ds-clone/.git/',
+            'log', '--format=%b', '-n', '1',
+            os.environ.get('GITHUB_HEAD_SHA')
+        ]).decode('utf-8').strip().upper()
+    except subprocess.CalledProcessError as e:
+        print("Error while git show:", e, file=sys.stderr)
+        return False
+
+    print('Commit message:', git_msg)
+
+    x_deepspeech = filter(lambda x: 'X-DEEPSPEECH:' in x, git_msg.split('\n'))
+    if len(list(filter(lambda x: 'NOBUILD' in x, x_deepspeech))) == 1:
+        print('Not running anything according to commit message')
+        return False
+
+    return True
+
 if __name__ == '__main__' :
+    if not is_dry_run():
+        # We might want to NOT run in some cases
+        if not should_run():
+            sys.exit(0)
+
     base_context = taskcluster_event_context()
     base_context = merge_dicts(base_context, functions_context())
     base_context = merge_dicts(base_context, shared_context())
@@ -188,7 +228,7 @@ if __name__ == '__main__' :
             continue
 
         t = tasks[task]
-        if len(sys.argv) > 1 and sys.argv[1] == '--dry':
+        if is_dry_run():
             print(json.dumps(t, indent=2))
             continue
 
