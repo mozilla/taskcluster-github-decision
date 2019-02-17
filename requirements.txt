@@ -2,4 +2,4 @@ json-e == 2.3.1
 networkx 
 pyaml
 requests
-slugid
+slugid == 1.0.7
