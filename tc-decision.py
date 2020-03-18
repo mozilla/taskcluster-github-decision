@@ -17,7 +17,7 @@ import subprocess
 
 import networkx as nx
 
-TASKS_ROOT = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'taskcluster')
+TASKS_ROOT = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'regression-tests')
 TASKCLUSTER_API_BASEURL = 'http://taskcluster/queue/v1/task/%(task_id)s'
 
 def string_to_dict(id, value):
@@ -167,7 +167,7 @@ def should_run():
         subprocess.check_call([
             'git', 'clone', '--quiet', '-b', os.environ.get('GITHUB_HEAD_BRANCH'),
             '--single-branch', os.environ.get('GITHUB_HEAD_REPO_URL'),
-            '--depth=1', '/tmp/ds-clone/'
+            '--depth=1', '/tmp/md-clone/'
         ], env={ 'GIT_LFS_SKIP_SMUDGE': '1'})
     except subprocess.CalledProcessError as e:
         print("Error while git cloning:", e, file=sys.stderr)
@@ -175,7 +175,7 @@ def should_run():
 
     try:
         git_msg = subprocess.check_output([
-            'git', '--git-dir=/tmp/ds-clone/.git/',
+            'git', '--git-dir=/tmp/md-clone/.git/',
             'log', '--format=%b', '-n', '1',
             os.environ.get('GITHUB_HEAD_SHA')
         ]).decode('utf-8').strip().upper()
@@ -185,8 +185,8 @@ def should_run():
 
     print('Commit message:', git_msg)
 
-    x_deepspeech = filter(lambda x: 'X-DEEPSPEECH:' in x, git_msg.split('\n'))
-    if len(list(filter(lambda x: 'NOBUILD' in x, x_deepspeech))) == 1:
+    x_marian_dev = filter(lambda x: 'X-MARIAN-DEV:' in x, git_msg.split('\n'))
+    if len(list(filter(lambda x: 'NOBUILD' in x, x_marian_dev))) == 1:
         print('Not running anything according to commit message')
         return False
 
@@ -206,7 +206,7 @@ if __name__ == '__main__' :
     tasks_graph = nx.DiGraph()
     tasks = {}
 
-    for build in glob(os.path.join(TASKS_ROOT, '*.yml')):
+    for build in glob(os.path.join(os.path.join(TASKS_ROOT, 'tests'), '**/*.yml'), recursive=True):
         t = create_task_payload(build, base_context)
 
         # We allow template to produce completely empty output
