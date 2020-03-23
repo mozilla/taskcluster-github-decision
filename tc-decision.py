@@ -228,8 +228,8 @@ if __name__ == '__main__' :
             continue
 
         t = tasks[task]
-        print(json.dumps(t, indent=2))
         if is_dry_run():
+            print(json.dumps(t, indent=2))
             continue
 
         p = send_task(t)
