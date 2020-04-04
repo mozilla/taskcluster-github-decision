@@ -206,7 +206,7 @@ if __name__ == '__main__' :
     tasks_graph = nx.DiGraph()
     tasks = {}
 
-    for build in glob(os.path.join(os.path.join(TASKS_ROOT, 'tests'), '**/*.yml'), recursive=True):
+    for build in glob(os.path.join(os.path.join(TASKS_ROOT, 'tests'), '**/linux-*.yml'), recursive=True):
         t = create_task_payload(build, base_context)
 
         # We allow template to produce completely empty output
